@@ -1,0 +1,9 @@
+streamlit
+pandas
+numpy
+simpy
+networkx
+plotly
+stable-baselines3
+gymnasium
+openpyxl
