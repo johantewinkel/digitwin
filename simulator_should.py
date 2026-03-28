@@ -15,6 +15,7 @@ def simulate_process(task_times, resources, n_cases, manual_waiting=None):
 
         current = list(task_times.keys())[0]  # startnode
         start = env.now
+        st.write("current node:", current)
 
         while current:
 
