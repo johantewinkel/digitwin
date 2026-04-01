@@ -1,8 +1,9 @@
 import simpy
 import numpy as np
 import random
+from decision_engine import decide
 
-def simulate_process(task_times, resources, n_cases, manual_waiting=None):
+def simulate_process(task_times, resources, n_cases, manual_waiting=None, workflow=None, context_override=None):
 
     env = simpy.Environment()
 
@@ -13,58 +14,62 @@ def simulate_process(task_times, resources, n_cases, manual_waiting=None):
 
     def process():
 
-        current = list(task_times.keys())[0]  # startnode
+        # voorbeeld context (kan uit data komen!)
+        if context_override:
+            context = context_override
+        context = {
+            "humidity": random.uniform(0,1),
+            "urgency": random.randint(1,5)
+        }
+
+        current = workflow["nodes"][0]["name"]
         start = env.now
-        st.write("current node:", current)
 
         while current:
 
-            node = current
-            st.write("current node:", current)
+            node_config = next(n for n in workflow["nodes"] if n["name"] == current)
 
-            # decision node
-            node_config = next(n for n in workflow["nodes"] if n["name"] == node)
-
+            # ---- DECISION NODE ----
             if node_config.get("type") == "decision":
 
-                probs = node_config["probabilities"]
-                choice = random.choices(list(probs.keys()), weights=probs.values())[0]
+                decision = decide(node_config, context)
 
-                # vind juiste edge
                 next_edges = [
                     e for e in workflow["edges"]
-                    if e["from"] == node and e.get("label") == choice
+                    if e["from"] == current and e.get("label") == decision
                 ]
-                
+
                 current = next_edges[0]["to"] if next_edges else None
-                st.write("current node:", current)
                 continue
 
-            # normale task
-            with res[node].request() as req:
+            # ---- NORMAL TASK ----
+            with res[current].request() as req:
                 req_time = env.now
                 yield req
 
                 wait = env.now - req_time
-                waiting_times[node].append(wait)
 
-                yield env.timeout(task_times[node])
+                if manual_waiting:
+                    wait += manual_waiting.get(current, 0)
 
-            # volgende stap
-            next_edges = [e for e in workflow["edges"] if e["from"] == node]
+                waiting_times[current].append(wait)
 
+                yield env.timeout(task_times[current])
+
+            next_edges = [e for e in workflow["edges"] if e["from"] == current]
             current = next_edges[0]["to"] if next_edges else None
-
+        #print("Tijd: ", env.now, " ", start)
         total_times.append(env.now - start)
-
+        
     for _ in range(n_cases):
         env.process(process())
 
     env.run()
+    valid_waiting = [ np.mean(v) for v in waiting_times.values() if len(v) > 0]
 
+    print("total: ", [np.mean(v) for v in waiting_times.values()])
     return {
-        "avg_total_time": np.mean(total_times),
-        "avg_waiting_time": np.mean([np.mean(v) for v in waiting_times.values()]),
+        "avg_total_time": np.mean(total_times) if total_times else 0,
+        "avg_waiting_time": np.mean(valid_waiting) if valid_waiting else 0,
         "waiting_times": waiting_times
     }
-

@@ -6,9 +6,10 @@ WASMACHINE_WORKFLOW = {
         {
             "name": "Droger nodig?",
             "type": "decision",
-            "probabilities": {
-                "Ja": 0.6,
-                "Nee": 0.4
+            "model": "simple_rule",
+            "rules": {
+                "humidity > 0.6": "Ja",
+                "else": "Nee"
             }
         },
         {"name": "Sorteren wasmand ouders inc sokken vouwen"},

@@ -30,5 +30,6 @@ def extract_parameters_from_event_log(file):
 
     resources = {act:1 for act in durations}
     costs = {act:10 for act in durations}
+    #df["urgency"] = df.get("urgency", 3)
 
     return durations, waiting, costs, resources

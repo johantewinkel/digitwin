@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-from simulator import simulate_process
+from simulator_should import simulate_process
 from rl_agent import run_rl
 from analytics import tqm_analysis, visualize_workflow_graph
 from excel_utils import export_workflow_to_excel, import_workflow_from_excel
@@ -27,6 +27,8 @@ n_cases = st.sidebar.slider("Aantal cases", 1, 100, 20)
 st.sidebar.markdown("## 📊 Scenario Planning")
 volume_factor = st.sidebar.slider("Volume (cases)", 0.5, 2.0, 1.0)
 resource_factor = st.sidebar.slider("Resources scaling", 0.5, 2.0, 1.0)
+humidity_input = st.sidebar.slider("Humidity", 0.0, 1.0, 0.5)
+urgency_input = st.sidebar.slider("Urgency", 1, 5, 3)
 
 # ---------------- DATA LOAD ----------------
 if mode == "Demo":
@@ -80,12 +82,7 @@ if "task_times" in locals():
     with tab2:
         if st.button("🚀 Run Simulation"):
 
-            result = simulate_process(
-                task_times,
-                scaled_resources,
-                scaled_cases,
-                manual_waiting=waiting
-            )
+            result = simulate_process(task_times, scaled_resources, scaled_cases, manual_waiting=waiting, workflow=workflow)
 
             st.metric("Doorlooptijd", round(result["avg_total_time"],1))
             st.metric("Wachttijd", round(result["avg_waiting_time"],1))
@@ -95,7 +92,17 @@ if "task_times" in locals():
 
     # ---------------- BOTTLENECKS ----------------
     with tab3:
-        result = simulate_process(task_times, scaled_resources, scaled_cases, waiting)
+        result = simulate_process(
+            task_times, 
+            scaled_resources, 
+            scaled_cases, 
+            manual_waiting=waiting, 
+            workflow=workflow,
+            context_override={
+                "humidity": humidity_input,
+                "urgency": urgency_input
+            }
+        )
         tqm_analysis(result["waiting_times"])
 
     # ---------------- OPTIMIZATION ----------------
